@@ -1,0 +1,13 @@
+package com.saps.auth.api;
+
+public enum AuthFailure {
+    INVALID_INPUT,
+    USER_ALREADY_EXISTS,
+    INVALID_CREDENTIALS,
+    INVALID_TOKEN,
+    TOKEN_EXPIRED,
+    RATE_LIMITED,
+    MFA_NOT_ENABLED,
+    MFA_INVALID_CODE,
+    FORBIDDEN
+}
