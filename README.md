@@ -43,21 +43,36 @@ Current Maven modules:
 | `auth-support` | Shared hashing/token strategies, event plumbing, and RBAC components. |
 | `auth-layered` | Layered implementation and demo composition root. |
 
-The shared contract and support module are intended to keep non-architectural behavior consistent across variants. The current layered demo uses in-memory repositories; production security and persistent storage are outside the current implementation.
+## Design patterns and where they are used
+
+These are the patterns present in the current code, without the patterns planned for future variants.
+
+| Pattern / style | How it is used |
+|----|-----|
+| **Layered architecture** | The demo is the presentation/composition entry point; the service handles authentication use cases; the data package owns user storage abstractions and the in-memory implementation. |
+| **Service Layer** | Centralizes registration, login, MFA, token/session lifecycle, and event publication behind the API service contract. |
+| **Repository** | Hides in-memory persistence behind interfaces, allowing services to depend on storage contracts rather than map implementations. |
+| **Strategy** | The service receives hashing and token behavior through interfaces. There is currently one concrete implementation of each, so alternative strategies can be substituted but are not yet compared. |
+| **Observer / publish-subscribe** | The service publishes registration, login, MFA, refresh, and logout events. Listeners subscribe independently; the default-role listener assigns the USER role after registration. |
+| **Constructor / dependency injection** | Dependencies are created and wired at the composition root, then passed into consumers through constructors. |
+
 
 ## Implemented so far
 
 - [x] Created a multi-module Maven project targeting Java 17+.
 - [x] Defined a shared authentication/authorization API, request/response types, and typed failures.
+- [x] Defined registration, login, token verification, refresh-token rotation, logout, and authorization operations in the shared API.
+- [x] Defined shared authentication/session operations and an optional MFA capability.
 - [x] Added shared password-hashing and token-service abstractions with implementations.
 - [x] Added repository abstractions and in-memory user, role, and role-assignment repositories.
 - [x] Added RBAC authorization and default-role assignment through an observer/event-bus flow.
 - [x] Implemented the layered registration, login, token verification, and authorization demo.
+- [x] Added random six-digit MFA challenges that expire after 15 seconds and can be resent.
 - [ ] Implement and connect the God-class
 - [ ] Implement and connect the hexagonal and event-driven variants.
 - [ ] Add automated tests covering equivalent behavior in each variant.
 - [ ] Add the planned change requests and measurement scripts/results.
-- [x] Create the required `M1`, `M2`, and `M3` tags.
+- [] Create the required `M1`, `M2`, and `M3` tags.
 - [ ] Produce the proposed architecture and diagrams.
 - [ ] Produce the milestone 1 presentation.
 

@@ -16,4 +16,16 @@ public sealed interface AuthEvent {
 
     record LoginFailed(String username, AuthFailure reason, Instant occurredAt) implements AuthEvent {
     }
+
+    record MfaChallengeIssued(String username, Instant occurredAt) implements AuthEvent {
+    }
+
+    record MfaCodeResent(String username, Instant occurredAt) implements AuthEvent {
+    }
+
+    record SessionRefreshed(String username, Instant occurredAt) implements AuthEvent {
+    }
+
+    record SessionLoggedOut(String username, Instant occurredAt) implements AuthEvent {
+    }
 }

@@ -14,6 +14,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.UUID;
 
 public final class HmacTokenService implements TokenService {
 
@@ -34,7 +35,9 @@ public final class HmacTokenService implements TokenService {
     @Override
     public AuthToken issue(String username) {
         Instant expiresAt = clock.instant().plus(ttl);
-        String payload = username + "|" + expiresAt.getEpochSecond();
+        String encodedUsername = ENCODER.encodeToString(username.getBytes(StandardCharsets.UTF_8));
+        String payload = "v2|" + encodedUsername + "|" + expiresAt.getEpochSecond()
+                + "|" + UUID.randomUUID();
         String body = ENCODER.encodeToString(payload.getBytes(StandardCharsets.UTF_8));
         String signature = ENCODER.encodeToString(sign(body));
         return new AuthToken(body + "." + signature, expiresAt);
@@ -62,20 +65,32 @@ public final class HmacTokenService implements TokenService {
             throw invalid(); // not valid base64url
         }
 
-        int bar = payload.lastIndexOf('|');
-        if (bar < 0) {
-            throw invalid();
-        }
         Instant expiresAt;
+        String username;
         try {
-            expiresAt = Instant.ofEpochSecond(Long.parseLong(payload.substring(bar + 1)));
-        } catch (NumberFormatException e) {
+            if (payload.startsWith("v2|")) {
+                String[] parts = payload.split("\\|", -1);
+                if (parts.length != 4) {
+                    throw invalid();
+                }
+                username = new String(DECODER.decode(parts[1]), StandardCharsets.UTF_8);
+                expiresAt = Instant.ofEpochSecond(Long.parseLong(parts[2]));
+                UUID.fromString(parts[3]);
+            } else {
+                int bar = payload.lastIndexOf('|');
+                if (bar < 0) {
+                    throw invalid();
+                }
+                username = payload.substring(0, bar);
+                expiresAt = Instant.ofEpochSecond(Long.parseLong(payload.substring(bar + 1)));
+            }
+        } catch (IllegalArgumentException e) {
             throw invalid();
         }
         if (!clock.instant().isBefore(expiresAt)) {
             throw new AuthException(AuthFailure.TOKEN_EXPIRED, "Token expired");
         }
-        return new Identity(payload.substring(0, bar), expiresAt);
+        return new Identity(username, expiresAt);
     }
 
     private byte[] sign(String body) {
