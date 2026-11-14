@@ -1,51 +1,128 @@
 # Architecture Styles for an Authentication & Authorization Service
 
-SASPS course project: comparative study of design patterns and software architectures versus their associated anti-patterns.
+SASPS course project: a comparative study of software architectures and design patterns using functionally equivalent authentication and authorization implementations.
 
-## Goal
+## Problem and objectives
 
-Build the same login, token and authorization service in several architectures (layered, hexagonal, event-driven, plus a naive God-class baseline) behind one shared contract. Then compare them on:
+The project investigates how architectural choices affect a small authentication and authorization service. The same use cases will be implemented in multiple variants, including a baseline without the investigated patterns and structured alternatives. The goal is to measure trade-offs objectively, not to assume that a pattern is always better.
+
+The comparison focuses on:
 
 - **Performance:** authentication latency and throughput.
-- **Changeability:** how much code must change for each change request (new hashing algorithm, MFA, file to database storage, audit logging, new role/permission).
-- **Structure:** coupling, complexity and test setup cost.
+- **Changeability:** implementation effort and code impact for fixed change requests, such as adding MFA, changing storage, adding audit logging, or introducing a role/permission.
+- **Structure and testability:** coupling, complexity, test coverage, and the effort needed to set up tests.
 
-Cryptography is kept simple on purpose. The study is about architecture, not security engineering.
+Results may be positive, neutral, or negative. Conclusions will be based on the measurements and their limitations.
 
-## Packages
+## Research questions and hypotheses
+
+The initial research questions are:
+
+1. How do the selected architectures compare in authentication latency and throughput?
+2. How much implementation change is required to add the same feature to each variant?
+3. How do their structure and testability differ?
+
+Working hypotheses to verify (or reject) are that more modular variants reduce change impact and improve test isolation, while adding some implementation complexity or runtime overhead. These are hypotheses, not expected outcomes.
+
+## Variants and architecture
+
+All variants should expose the same `auth-api` contract and implement equivalent use cases so that measurements are comparable.
+
+| Variant | Status | Description |
+|---|---|---|
+| Layered | In progress | Presentation/service/data separation; current runnable baseline. |
+| God-class baseline | Planned | Intentionally concentrated logic and dependencies, used as the less-structured comparison. |
+| Hexagonal | Planned | Ports and adapters isolate application logic from external systems. |
+| Event-driven | Planned | Events decouple selected workflows and reactions. |
+
+Current Maven modules:
 
 | Module | Purpose |
 |---|---|
-| `auth-api` | The contract every architecture implements: service interfaces, DTOs, typed failures. No logic. |
-| `auth-support` | Shared building blocks so they are not a variable in the comparison: hashing and token strategies, event plumbing, RBAC. |
-| `auth-layered` | First architecture (Presentation, Service, Data) plus a `Demo` composition root. |
+| `auth-api` | Shared service interfaces, DTOs, and typed failures. |
+| `auth-support` | Shared hashing/token strategies, event plumbing, and RBAC components. |
+| `auth-layered` | Layered implementation and demo composition root. |
 
-Dependencies point one way: `auth-layered` → `auth-support` → `auth-api`.
+The shared contract and support module are intended to keep non-architectural behavior consistent across variants. The current layered demo uses in-memory repositories; production security and persistent storage are outside the current implementation.
 
-## Patterns implemented
+## Implemented so far
 
-- **Strategy:** password hashing, token scheme, authorization policy.
-- **Repository:** users, roles and role assignments behind interfaces.
-- **Dependency Injection:** constructor injection only; `Demo` is the single place that knows concrete classes.
-- **Observer:** event bus for registration and login events; default role assignment reacts to them.
+- [x] Created a multi-module Maven project targeting Java 17+.
+- [x] Defined a shared authentication/authorization API, request/response types, and typed failures.
+- [x] Added shared password-hashing and token-service abstractions with implementations.
+- [x] Added repository abstractions and in-memory user, role, and role-assignment repositories.
+- [x] Added RBAC authorization and default-role assignment through an observer/event-bus flow.
+- [x] Implemented the layered registration, login, token verification, and authorization demo.
+- [ ] Implement and connect the God-class
+- [ ] Implement and connect the hexagonal and event-driven variants.
+- [ ] Add automated tests covering equivalent behavior in each variant.
+- [ ] Add the planned change requests and measurement scripts/results.
+- [x] Create the required `M1`, `M2`, and `M3` tags.
+- [ ] Produce the proposed architecture and diagrams.
+- [ ] Produce the milestone 1 presentation.
 
-## Anti-patterns
+## Experimental methodology
 
-None implemented yet. The God-class baseline (God `AuthManager`, hard-coded algorithms, singleton/global state, one giant if/else, scattered role checks) is the next module to build, so every metric has a "before".
+### Fair comparison
 
-## Possible next steps
+- Keep use cases, inputs, validation rules, token behavior, and error behavior functionally equivalent across variants.
+- Run all variants with the same JDK, machine, JVM settings, dataset, and measurement procedure.
+- Separate setup and warm-up from timed measurements; repeat measurements where possible and report the number of runs.
+- Record environment details and commands so another team can reproduce the results.
+- Do not compare results from different configurations as if they were directly equivalent.
 
-- Unit tests for the token, service and RBAC classes.
-- File-backed repositories (the storage baseline for the database change request).
-- Chain of Responsibility for the login pipeline (rate limit, credentials, MFA, permission).
-- Decorators for logging, rate limiting and caching.
-- Adapter for storage backends.
-- God-class, hexagonal and event-driven versions.
-- Shared HTTP adapter and minimal UI.
-- TOTP multi-factor authentication.
-- Benchmarks (JMH) and change-impact measurements.
+### Measures
 
-## Run
+| Concern | Measures to report |
+|---|---|
+| Runtime performance | Authentication latency distribution and throughput under a stated workload. |
+| Changeability | Files and lines changed, implementation time, and tests added/changed for each predefined change request. |
+| Structure | Module/class dependencies, coupling indicators, and complexity measures, with the selected tools and definitions stated. |
+| Testability | Test coverage and the setup/dependency work needed to test core behavior. |
+
+Use a benchmark harness such as JMH for JVM performance measurements where practical. Include raw data alongside summaries and graphs; do not report unmeasured estimates as results. Discuss measurement noise, small-project effects, implementation differences, and other threats to validity.
+
+## Milestones and deliverables
+
+Update the checklists as work progresses. Each presentation must include team roles and contributions, planned versus completed sprint work, difficulties, and next steps.
+
+### Milestone 1 — Week 8: Design and foundation
+
+- [ ] Present the problem, objectives, and proposed application.
+- [ ] Explain the investigated patterns/styles, selection rationale, and anticipated benefits.
+- [ ] State experimental hypotheses, metrics, and comparison methodology.
+- [ ] Present the proposed architecture, diagrams, and implementation variants.
+- [ ] Show implementation status and, if available, a demonstration.
+- [ ] Present the team, roles, sprint progress, and plan through M2.
+
+### Milestone 2 — Week 12: Implementation and preliminary evaluation
+
+- [ ] Demonstrate the implemented functionality and explain differences between variants.
+- [ ] Give a functional demonstration.
+- [ ] Run initial experiments and collect comparative measurements.
+- [ ] Add preliminary graphs/tables, interpretations, and limitations to the repository.
+- [ ] Describe encountered problems and any planning changes.
+- [ ] Present member contributions, sprint progress, and plan through M3.
+
+### Milestone 3 — Week 14: Final evaluation and documentation
+
+- [ ] Present the final solution, architecture, and functional demonstration.
+- [ ] Document the final experimental methodology and reproduction conditions.
+- [ ] Present complete comparative results, graphs, tables, and interpretations.
+- [ ] Analyze advantages, disadvantages, trade-offs, and threats to validity.
+- [ ] State conclusions, whether hypotheses were supported, contributions, and future work.
+- [ ] Summarize final member contributions, planned versus completed work, and lessons learned.
+- [ ] Include Abstract, Introduction, Related Work, Methodology, Implementation, Results, Discussion, Threats to Validity, Conclusions, and References in the PDF.
+
+## Sprint and Git practices
+
+- Keep the repository updated throughout the project.
+- At each milestone, record team roles, individual contributions, planned versus completed work, difficulties, and next-stage activities.
+- Create and maintain Git tags named `M1`, `M2`, and `M3` for the corresponding milestone states.
+- The final repository should contain every implementation variant, tests, experiment scripts, raw and summarized results, presentation/documentation deliverables, and reproduction instructions.
+- Keep experiment conditions comparable and repeat measurements where practical; document deviations.
+
+## Run the current implementation
 
 Requires JDK 17+ and Maven.
 
