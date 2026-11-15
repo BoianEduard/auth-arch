@@ -188,14 +188,10 @@ public class Demo {
                 logPath,
                 (user, code) -> pendingMfaCode.set(code));
 
-        prompt("  Username: ");
-        String username = scanner.nextLine().trim();
-        prompt("  Password (at least 8 characters): ");
-        String password = scanner.nextLine();
+        String username = registerUser(scanner, auth);
         boolean isAdmin = readYesNo(
                 scanner, "Should this account have admin rights? (y/n): ");
 
-        auth.register(new RegisterRequest(username, password));
         if (isAdmin) {
             assignments.assign(username, "ADMIN");
         }
@@ -220,6 +216,10 @@ public class Demo {
         } catch (AuthException exception) {
             if (exception.failure() == AuthFailure.INVALID_CREDENTIALS) {
                 System.out.println("Login failed: invalid username or password.");
+                return;
+            }
+            if (exception.failure() == AuthFailure.INVALID_INPUT) {
+                System.out.println("Login failed: username and password are required.");
                 return;
             }
             throw exception;
@@ -256,6 +256,28 @@ public class Demo {
         }
     }
 
+    private static String registerUser(Scanner scanner, MfaCapableAuthService auth) {
+        while (true) {
+            prompt("  Username: ");
+            String username = scanner.nextLine().trim();
+            prompt("  Password (at least 8 characters): ");
+            String password = scanner.nextLine();
+            try {
+                auth.register(new RegisterRequest(username, password));
+                return username;
+            } catch (AuthException exception) {
+                if (exception.failure() == AuthFailure.INVALID_INPUT) {
+                    System.out.println("Registration failed: a username is required"
+                            + " and the password needs at least 8 characters.");
+                } else if (exception.failure() == AuthFailure.USER_ALREADY_EXISTS) {
+                    System.out.println("Registration failed: this username is already taken.");
+                } else {
+                    throw exception;
+                }
+            }
+        }
+    }
+
     private static AuthSession completeMfaWithResend(
             Scanner scanner,
             MfaCapableAuthService auth,
@@ -268,6 +290,10 @@ public class Demo {
             if (input.equalsIgnoreCase("resend")) {
                 challenge = auth.resendMfa(challenge.challengeToken());
                 printMfaCode(pendingMfaCode);
+                continue;
+            }
+            if (input.isEmpty()) {
+                System.out.println("No code entered. Type the 6-digit code or 'resend'.");
                 continue;
             }
 
